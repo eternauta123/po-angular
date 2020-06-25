@@ -42,6 +42,8 @@ type UrlOrPoCustomizationFunction = string | (() => PoPageDynamicSearchOptions);
 })
 export class PoPageDynamicSearchComponent extends PoPageDynamicSearchBaseComponent implements OnInit, OnDestroy {
   private loadSubscription: Subscription;
+  private previousDisclaimers = [];
+  private appliedFromSearch = false;
 
   private readonly _disclaimerGroup: PoDisclaimerGroup = {
     change: this.onChangeDisclaimerGroup.bind(this),
@@ -103,15 +105,31 @@ export class PoPageDynamicSearchComponent extends PoPageDynamicSearchBaseCompone
   }
 
   onAction() {
-    this._disclaimerGroup.disclaimers = [
-      { property: 'search', label: `${this.literals.quickSearchLabel} ${this.quickFilter}`, value: this.quickFilter }
+    const disclaimerQuickSearchUpdated = {
+      property: 'search',
+      label: `${this.literals.quickSearchLabel} ${this.quickFilter}`,
+      value: this.quickFilter
+    };
+
+    const currentQuickSearchDisclaimer = this._disclaimerGroup.disclaimers.find(
+      disclaimer => disclaimer.property === 'search'
+    );
+    this.appliedFromSearch = disclaimerQuickSearchUpdated.value !== currentQuickSearchDisclaimer?.value;
+
+    const getDisclaimersWithConcatFilters = () => [
+      ...this.getDisclaimersWithoutQuickSearch(),
+      disclaimerQuickSearchUpdated
     ];
+
+    this._disclaimerGroup.disclaimers = this.concatFilters
+      ? getDisclaimersWithConcatFilters()
+      : [disclaimerQuickSearchUpdated];
 
     if (this.quickSearch.observers && this.quickSearch.observers.length > 0) {
       this.quickSearch.emit(this.quickFilter);
     }
 
-    if (this.keepFilters) {
+    if (this.keepFilters && !this.concatFilters) {
       this.filters.forEach(element => delete element.initValue);
     }
 
@@ -125,11 +143,19 @@ export class PoPageDynamicSearchComponent extends PoPageDynamicSearchBaseCompone
   }
 
   onAdvancedSearch(filters) {
+    const currentFilters = this.formatArrayToObjectKeyValue(this.filters);
+    this.appliedFromSearch = JSON.stringify(filters) !== JSON.stringify(currentFilters);
+
     this._disclaimerGroup.disclaimers = this.setDisclaimers(filters);
 
     this.setFilters(filters);
 
     this.advancedSearch.emit(filters);
+  }
+
+  private getDisclaimersWithoutQuickSearch() {
+    const quickSearchProperty = 'search';
+    return this._disclaimerGroup.disclaimers.filter(item => item.property !== quickSearchProperty);
   }
 
   private setFilters(filters) {
@@ -172,19 +198,21 @@ export class PoPageDynamicSearchComponent extends PoPageDynamicSearchBaseCompone
     return new Date(year, month - 1, day).toLocaleDateString(getBrowserLanguage());
   }
 
-  private formatsFilterValuesToUpdateDisclaimers(filters) {
-    const formattedFilters = filters.reduce(
+  private formatArrayToObjectKeyValue(
+    filters: Array<{ property: string; value?: any; initValue?: any }>
+  ): { [key: string]: any } {
+    const formattedObject = filters.reduce(
       (result, item) => Object.assign(result, { [item.property]: item.value || item.initValue }),
       {}
     );
 
-    Object.keys(formattedFilters).forEach(key => {
-      if (!formattedFilters[key]) {
-        delete formattedFilters[key];
+    Object.keys(formattedObject).forEach(key => {
+      if (!formattedObject[key]) {
+        delete formattedObject[key];
       }
     });
 
-    return formattedFilters;
+    return formattedObject;
   }
 
   private getFieldByProperty(fields: Array<PoDynamicFormField>, fieldName: string) {
@@ -204,21 +232,16 @@ export class PoPageDynamicSearchComponent extends PoPageDynamicSearchBaseCompone
   }
 
   private onChangeDisclaimerGroup(disclaimers) {
-    if ((!this.disclaimersEqualsFilters(disclaimers) && !this.isQuickSearch(disclaimers)) || disclaimers.length === 0) {
+    const isDiclaimersLessThanPrevious = this.previousDisclaimers.length > disclaimers.length;
+    const isRemovedDisclaimers = (!this.appliedFromSearch && isDiclaimersLessThanPrevious) || disclaimers.length === 0;
+
+    if (isRemovedDisclaimers) {
       this.changeDisclaimers.emit(disclaimers);
-      this.setFilters(this.formatsFilterValuesToUpdateDisclaimers(disclaimers));
+      this.setFilters(this.formatArrayToObjectKeyValue(disclaimers));
     }
-  }
 
-  private disclaimersEqualsFilters(disclaimers) {
-    const formattedDisclaimers = this.formatsFilterValuesToUpdateDisclaimers(disclaimers);
-    const formattedFilters = this.formatsFilterValuesToUpdateDisclaimers(this.filters);
-
-    return JSON.stringify(formattedDisclaimers) === JSON.stringify(formattedFilters);
-  }
-
-  private isQuickSearch(disclaimers) {
-    return disclaimers.length > 0 && disclaimers.find(element => element.property === 'search');
+    this.appliedFromSearch = false;
+    this.previousDisclaimers = [...disclaimers];
   }
 
   private setDisclaimers(filters) {
@@ -256,7 +279,8 @@ export class PoPageDynamicSearchComponent extends PoPageDynamicSearchBaseCompone
       actions: this.actions,
       breadcrumb: this.breadcrumb,
       filters: this.filters,
-      keepFilters: this.keepFilters
+      keepFilters: this.keepFilters,
+      concatFilters: this.concatFilters
     };
 
     const pageOptionSchema: PoPageDynamicOptionsSchema<PoPageDynamicSearchOptions> = {
@@ -279,6 +303,9 @@ export class PoPageDynamicSearchComponent extends PoPageDynamicSearchBaseCompone
         },
         {
           nameProp: 'keepFilters'
+        },
+        {
+          nameProp: 'concatFilters'
         }
       ]
     };

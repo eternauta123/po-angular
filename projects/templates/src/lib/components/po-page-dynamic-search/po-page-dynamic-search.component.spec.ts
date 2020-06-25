@@ -125,8 +125,9 @@ describe('PoPageDynamicSearchComponent:', () => {
         expect(component['changeDetector'].detectChanges).toHaveBeenCalled();
       });
 
-      it('should update filters value if `keepFilters` is true', () => {
+      it('should update filters value if `keepFilters` is true and `concatFilters` is false', () => {
         component.keepFilters = true;
+        component.concatFilters = false;
         component.filters = [{ property: 'city', initValue: 'Ontario' }];
 
         const expectedValue = [{ property: 'city' }];
@@ -134,6 +135,36 @@ describe('PoPageDynamicSearchComponent:', () => {
         component.onAction();
 
         expect(component.filters).toEqual(expectedValue);
+      });
+
+      it('shouldn`t update filters value if `concatFilters` and `keepFilters` are true', () => {
+        component.keepFilters = true;
+        component.concatFilters = true;
+        component.filters = [{ property: 'city', initValue: 'Ontario' }];
+
+        const expectedValue = [{ property: 'city', initValue: 'Ontario' }];
+
+        component.onAction();
+
+        expect(component.filters).toEqual(expectedValue);
+      });
+
+      it('should set `appliedFromSearch` with true if disclaimerQuickSearch.value not equals to currentQuickSearch.value', () => {
+        component['quickFilter'] = 'jane';
+        component['_disclaimerGroup'].disclaimers = [{ property: 'search', value: 'john' }];
+
+        component.onAction();
+
+        expect(component['appliedFromSearch']).toEqual(true);
+      });
+
+      it('should set `appliedFromSearch` with false if disclaimerQuickSearch.value equals to currentQuickSearch.value', () => {
+        component['quickFilter'] = 'john';
+        component['_disclaimerGroup'].disclaimers = [{ property: 'search', value: 'john' }];
+
+        component.onAction();
+
+        expect(component['appliedFromSearch']).toEqual(false);
       });
     });
 
@@ -167,6 +198,36 @@ describe('PoPageDynamicSearchComponent:', () => {
       expect(component['setDisclaimers']).toHaveBeenCalled();
       expect(component['setFilters']).toHaveBeenCalledBefore(component.advancedSearch.emit);
       expect(component.advancedSearch.emit).toHaveBeenCalledWith(filters);
+    });
+
+    it(`onAdvancedSearch: 'appliedFromSearch' should be true if parameter filters not equals to current filters'`, () => {
+      const filters = { cpf: 'value1' };
+
+      component.filters = [{ property: 'cpf', initValue: '9999' }];
+
+      spyOn(component, <any>'setDisclaimers');
+      spyOn(component.advancedSearch, 'emit');
+
+      component.onAdvancedSearch(filters);
+
+      expect(component['setDisclaimers']).toHaveBeenCalled();
+      expect(component.advancedSearch.emit).toHaveBeenCalledWith(filters);
+      expect(component['appliedFromSearch']).toBe(true);
+    });
+
+    it(`onAdvancedSearch: 'appliedFromSearch' should be false if parameter filters equals to current filters'`, () => {
+      const filters = { cpf: '9999' };
+
+      component.filters = [{ property: 'cpf', initValue: '9999' }];
+
+      spyOn(component, <any>'setDisclaimers');
+      spyOn(component.advancedSearch, 'emit');
+
+      component.onAdvancedSearch(filters);
+
+      expect(component['setDisclaimers']).toHaveBeenCalled();
+      expect(component.advancedSearch.emit).toHaveBeenCalledWith(filters);
+      expect(component['appliedFromSearch']).toBe(false);
     });
 
     it(`setFilters: should call 'convertToFilters'`, () => {
@@ -205,7 +266,7 @@ describe('PoPageDynamicSearchComponent:', () => {
       expect(convertedFilters).toEqual(expectedFormattedFilters);
     });
 
-    it(`formatsFilterValuesToUpdateDisclaimers: should formats filter value to update disclaimers`, () => {
+    it(`formatArrayToObjectKeyValue: should formats filter value to update disclaimers`, () => {
       const filterToBeFormatted = [
         { property: 'city', initValue: 'Ontario' },
         { property: 'name', value: 'teste' },
@@ -213,7 +274,7 @@ describe('PoPageDynamicSearchComponent:', () => {
       ];
       const expectedFormattedFilters = { city: 'Ontario', name: 'teste' };
 
-      const convertedFilters = component['formatsFilterValuesToUpdateDisclaimers'](filterToBeFormatted);
+      const convertedFilters = component['formatArrayToObjectKeyValue'](filterToBeFormatted);
 
       expect(convertedFilters).toEqual(expectedFormattedFilters);
     });
@@ -241,106 +302,83 @@ describe('PoPageDynamicSearchComponent:', () => {
       expect(component['getFieldByProperty'](fields, fieldName)).toEqual(result);
     });
 
-    it(`onChangeDisclaimerGroup: should call 'changeDisclaimers.emit', 'formatsFilterValuesToUpdateDisclaimers' and 'setFilters'
-    if 'disclaimersEqualsFilters' and 'isQuickSearch' are 'false'`, () => {
-      const disclaimers = [{ label: 'City: Ontario', property: 'city', value: 'Ontario' }];
-      const formattedDisclaimersToEmitToAdvancedFilter = { city: 'Ontario' };
+    it(`onChangeDisclaimerGroup: shouldn't call 'changeDisclaimers.emit' if disclaimers have been added because of quickSearch`, () => {
+      component.filters = [{ property: 'city', initValue: 'Ontario' }];
+      const previousDisclaimers = [{ label: 'City: Ontario', property: 'city', value: 'Ontario' }];
+
+      component.literals.quickSearchLabel = 'Search';
+      component['quickFilter'] = 'Chicago';
+      component.onAction();
+
+      const disclaimersWithQuickFilter = [{ property: 'search', label: `Search Chicago`, value: 'Chicago' }];
+      const currentDisclaimers = [...previousDisclaimers, ...disclaimersWithQuickFilter];
+      spyOn(component.changeDisclaimers, 'emit');
+
+      component['onChangeDisclaimerGroup'](currentDisclaimers);
+
+      expect(component.changeDisclaimers.emit).not.toHaveBeenCalled();
+    });
+
+    it(`onChangeDisclaimerGroup: should call 'changeDisclaimers.emit' if disclaimers have been removed`, () => {
+      const previousDisclaimers = [
+        { label: 'City: Ontario', property: 'city', value: 'Ontario' },
+        { label: 'Name: Test', property: 'name', value: 'Test' }
+      ];
+      const currentDisclaimers = [{ label: 'City: Ontario', property: 'city', value: 'Ontario' }];
+
+      component.filters = [
+        { property: 'city', initValue: 'Ontario' },
+        { property: 'name', initValue: 'Test' }
+      ];
+
+      component['onChangeDisclaimerGroup'](previousDisclaimers);
 
       spyOn(component.changeDisclaimers, 'emit');
-      spyOn(component, <any>'disclaimersEqualsFilters').and.returnValue(false);
-      spyOn(component, <any>'isQuickSearch').and.returnValue(false);
-      spyOn(component, <any>'formatsFilterValuesToUpdateDisclaimers').and.returnValue(
-        formattedDisclaimersToEmitToAdvancedFilter
-      );
-      spyOn(component, <any>'setFilters');
 
-      component['onChangeDisclaimerGroup'](disclaimers);
+      component['onChangeDisclaimerGroup'](currentDisclaimers);
 
-      expect(component.changeDisclaimers.emit).toHaveBeenCalledWith(disclaimers);
-      expect(component['formatsFilterValuesToUpdateDisclaimers']).toHaveBeenCalledWith(disclaimers);
-      expect(component['setFilters']).toHaveBeenCalledWith(formattedDisclaimersToEmitToAdvancedFilter);
+      expect(component.changeDisclaimers.emit).toHaveBeenCalledWith(currentDisclaimers);
     });
 
-    it(`onChangeDisclaimerGroup: should call 'changeDisclaimers.emit', 'formatsFilterValuesToUpdateDisclaimers' and 'setFilters'
-    if 'disclaimers' is empty`, () => {
-      const disclaimers = [];
-      const formattedDisclaimersToEmitToAdvancedFilter = { city: 'Ontario' };
+    it(`onChangeDisclaimerGroup: should call 'changeDisclaimers.emit' if quickSearch is removed`, () => {
+      const previousDisclaimers = [
+        { label: 'City: Ontario', property: 'city', value: 'Ontario' },
+        { label: 'Name: Test', property: 'name', value: 'Test' },
+        { label: 'Search: Chicago', property: 'search', value: 'Chicago' }
+      ];
+
+      const currentDisclaimers = [
+        { label: 'City: Ontario', property: 'city', value: 'Ontario' },
+        { label: 'Name: Test', property: 'name', value: 'Test' }
+      ];
+
+      component.literals.quickSearchLabel = 'Search';
+      component['quickFilter'] = 'Chicago';
+      component.onAction();
+
+      component['onChangeDisclaimerGroup'](previousDisclaimers);
+
+      component['previousDisclaimers'] = previousDisclaimers;
 
       spyOn(component.changeDisclaimers, 'emit');
-      spyOn(component, <any>'disclaimersEqualsFilters').and.returnValue(true);
-      spyOn(component, <any>'isQuickSearch').and.returnValue(true);
-      spyOn(component, <any>'formatsFilterValuesToUpdateDisclaimers').and.returnValue(
-        formattedDisclaimersToEmitToAdvancedFilter
-      );
-      spyOn(component, <any>'setFilters');
 
-      component['onChangeDisclaimerGroup'](disclaimers);
+      component['onChangeDisclaimerGroup'](currentDisclaimers);
 
-      expect(component.changeDisclaimers.emit).toHaveBeenCalledWith(disclaimers);
-      expect(component['formatsFilterValuesToUpdateDisclaimers']).toHaveBeenCalledWith(disclaimers);
-      expect(component['setFilters']).toHaveBeenCalledWith(formattedDisclaimersToEmitToAdvancedFilter);
+      expect(component.changeDisclaimers.emit).toHaveBeenCalledWith(currentDisclaimers);
     });
 
-    it(`onChangeDisclaimerGroup: should't call 'changeDisclaimers.emit', 'formatsFilterValuesToUpdateDisclaimers' and 'setFilters'
-    if 'disclaimersEqualsFilters' and 'isQuickSearch' are 'true' and 'disclaimers' isn't 'empty'`, () => {
-      const disclaimers = [{ label: 'City: Ontario', property: 'city', value: 'Ontario' }];
-      const formattedDisclaimersToEmitToAdvancedFilter = { city: 'Ontario' };
+    it(`onChangeDisclaimerGroup: should call 'changeDisclaimers.emit' if disclaimers.length equals to 0`, () => {
+      const previousDisclaimers = [{ label: 'City: Ontario', property: 'city', value: 'Ontario' }];
+      const currentDisclaimers = [];
+
+      component['appliedFromSearch'] = true;
+      component['previousDisclaimers'] = previousDisclaimers;
 
       spyOn(component.changeDisclaimers, 'emit');
-      spyOn(component, <any>'disclaimersEqualsFilters').and.returnValue(true);
-      spyOn(component, <any>'isQuickSearch').and.returnValue(true);
-      spyOn(component, <any>'formatsFilterValuesToUpdateDisclaimers').and.returnValue(
-        formattedDisclaimersToEmitToAdvancedFilter
-      );
-      spyOn(component, <any>'setFilters');
 
-      component['onChangeDisclaimerGroup'](disclaimers);
+      component['onChangeDisclaimerGroup'](currentDisclaimers);
 
-      expect(component.changeDisclaimers.emit).not.toHaveBeenCalledWith(disclaimers);
-      expect(component['formatsFilterValuesToUpdateDisclaimers']).not.toHaveBeenCalledWith(disclaimers);
-      expect(component['setFilters']).not.toHaveBeenCalledWith(formattedDisclaimersToEmitToAdvancedFilter);
-    });
-
-    it(`disclaimersEqualsFilters: should compare the value of the disclaimers and filters and return
-    false if the values ​​are not the same`, () => {
-      const disclaimers = [{ label: 'City: Ontario', property: 'city', value: 'Ontario' }];
-      const formattedDisclaimers = { city: 'Ontario' };
-      const formattedFilters = { name: 'Teste' };
-
-      spyOn(component, <any>'formatsFilterValuesToUpdateDisclaimers').and.returnValues(
-        formattedDisclaimers,
-        formattedFilters
-      );
-
-      const expectedReturn = component['disclaimersEqualsFilters'](disclaimers);
-
-      expect(component['formatsFilterValuesToUpdateDisclaimers']).toHaveBeenCalledTimes(2);
-      expect(expectedReturn).toBeFalse();
-    });
-
-    it(`disclaimersEqualsFilters: should compare the value of the disclaimers and filters and return
-    true if the values ​​are the same`, () => {
-      const disclaimers = [{ label: 'City: Ontario', property: 'city', value: 'Ontario' }];
-      const formattedDisclaimers = { city: 'Ontario' };
-      const formattedFilters = { city: 'Ontario' };
-
-      spyOn(component, <any>'formatsFilterValuesToUpdateDisclaimers').and.returnValues(
-        formattedDisclaimers,
-        formattedFilters
-      );
-
-      const expectedReturn = component['disclaimersEqualsFilters'](disclaimers);
-
-      expect(component['formatsFilterValuesToUpdateDisclaimers']).toHaveBeenCalledTimes(2);
-      expect(expectedReturn).toBeTrue();
-    });
-
-    it(`isQuickSearch: should return true if 'disclaimers' have a property with value 'search'`, () => {
-      const disclaimers = [{ label: 'Pesquisa rápida: teste', property: 'search', value: 'teste' }];
-
-      const expectedReturn = component['isQuickSearch'](disclaimers);
-
-      expect(expectedReturn).toBeTruthy();
+      expect(component.changeDisclaimers.emit).toHaveBeenCalledWith(currentDisclaimers);
     });
 
     it(`setDisclaimers: should return disclaimers based on the 'filters', call 'getFieldByProperty'
@@ -578,6 +616,79 @@ describe('PoPageDynamicSearchComponent:', () => {
         });
         expect(component.keepFilters).toBeTrue();
       }));
+    });
+  });
+
+  describe('Integration:', () => {
+    it(`should add quickSearch and advanced filter in disclaimers if concat-filters is true and advanced filter is defined`, () => {
+      component.concatFilters = true;
+
+      component.filters = [{ property: 'city', initValue: 'Ontario' }];
+
+      component.literals.quickSearchLabel = 'Search';
+      component['quickFilter'] = 'Chicago';
+      component.onAction();
+
+      const currentDisclaimers = [
+        { label: 'City: Ontario', value: 'Ontario', property: 'city' },
+        { property: 'search', label: `Search Chicago`, value: 'Chicago' }
+      ];
+
+      expect(component.disclaimerGroup.disclaimers).toEqual(currentDisclaimers);
+    });
+
+    it(`should add advanced filter and quickSearch updated in disclaimers if concat-filters is true and advanced filter is defined`, () => {
+      component.concatFilters = true;
+
+      component.filters = [{ property: 'city', initValue: 'Ontario' }];
+
+      component.literals.quickSearchLabel = 'Search';
+      component['quickFilter'] = 'Chicago';
+      component.onAction();
+
+      component['quickFilter'] = 'Test';
+      component.onAction();
+
+      const currentDisclaimers = [
+        { label: 'City: Ontario', value: 'Ontario', property: 'city' },
+        { property: 'search', label: `Search Test`, value: 'Test' }
+      ];
+
+      expect(component.disclaimerGroup.disclaimers).toEqual(currentDisclaimers);
+    });
+
+    it(`should add advanced search and remove quickSearch in disclaimers if concat-filters is false`, () => {
+      component.concatFilters = false;
+
+      component.literals.quickSearchLabel = 'Search';
+      component['quickFilter'] = 'Chicago';
+      component.onAction();
+      const disclaimersWithQuickFilter = [{ property: 'search', label: `Search Chicago`, value: 'Chicago' }];
+
+      expect(component.disclaimerGroup.disclaimers).toEqual(disclaimersWithQuickFilter);
+
+      const disclaimersWithAdvancedSearch = [{ label: 'City: Ontario', value: 'Ontario', property: 'city' }];
+
+      component.filters = [{ property: 'city', initValue: 'Ontario' }];
+
+      expect(component.disclaimerGroup.disclaimers).toEqual(disclaimersWithAdvancedSearch);
+    });
+
+    it(`should add advanced search and remove quickSearch in disclaimers if concat-filters is true`, () => {
+      component.concatFilters = true;
+
+      component.literals.quickSearchLabel = 'Search';
+      component['quickFilter'] = 'Chicago';
+      component.onAction();
+      const disclaimersWithQuickFilter = [{ property: 'search', label: `Search Chicago`, value: 'Chicago' }];
+
+      expect(component.disclaimerGroup.disclaimers).toEqual(disclaimersWithQuickFilter);
+
+      const disclaimersWithAdvancedSearch = [{ label: 'City: Ontario', value: 'Ontario', property: 'city' }];
+
+      component.filters = [{ property: 'city', initValue: 'Ontario' }];
+
+      expect(component.disclaimerGroup.disclaimers).toEqual(disclaimersWithAdvancedSearch);
     });
   });
 });
