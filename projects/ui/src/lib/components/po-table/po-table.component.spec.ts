@@ -17,6 +17,8 @@ import { PoTableColumn } from './interfaces/po-table-column.interface';
 import { PoTableComponent } from './po-table.component';
 import { PoTableModule } from './po-table.module';
 import { PoTableColumnTemplateDirective } from './po-table-column-template/po-table-column-template.directive';
+import { PoTableRowTemplateDirective } from '@po-ui/ng-components/lib';
+import { PoTableRowTemplateArrowDirection } from './enums/po-table-row-template-arrow-direction.enum';
 
 @Component({ template: 'Search' })
 export class SearchComponent {}
@@ -57,7 +59,8 @@ describe('PoTableComponent:', () => {
     mockTableDetailDiretive = {
       templateRef: null,
       poTableRowTemplate: {},
-      poTableRowTemplateShow: undefined
+      poTableRowTemplateShow: undefined,
+      tableRowTemplateArrowDirection: PoTableRowTemplateArrowDirection.Left
     };
 
     columns = [
@@ -1569,7 +1572,6 @@ describe('PoTableComponent:', () => {
       component.tableRowTemplate = mockTableDetailDiretive;
 
       fixture.detectChanges();
-
       const poTableColumnDetailToggle = nativeElement.querySelector('.po-table-column-detail-toggle');
 
       expect(poTableColumnDetailToggle).toBeTruthy();
@@ -2215,5 +2217,16 @@ describe('PoTableComponent:', () => {
 
       expect(res).toEqual(tableColumnTemplate.templateRef);
     });
+  });
+
+  it('tableRowTemplateDirectionIsRight: should be false', () => {
+    component.tableRowTemplate = mockTableDetailDiretive;
+    expect(component.tableRowTemplateDirectionIsRight).toBeFalse();
+  });
+
+  it('tableRowTemplateDirectionIsRight: should be true', () => {
+    mockTableDetailDiretive.tableRowTemplateArrowDirection = PoTableRowTemplateArrowDirection.Right;
+    component.tableRowTemplate = mockTableDetailDiretive;
+    expect(component.tableRowTemplateDirectionIsRight).toBeTrue();
   });
 });

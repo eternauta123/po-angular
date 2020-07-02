@@ -30,6 +30,7 @@ import { PoTableRowTemplateDirective } from './po-table-row-template/po-table-ro
 import { PoTableSubtitleColumn } from './po-table-subtitle-footer/po-table-subtitle-column.interface';
 import { PoTableCellTemplateDirective } from './po-table-cell-template/po-table-cell-template.directive';
 import { PoTableColumnTemplateDirective } from './po-table-column-template/po-table-column-template.directive';
+import { PoTableRowTemplateArrowDirection } from './enums/po-table-row-template-arrow-direction.enum';
 
 /**
  * @docsExtends PoTableBaseComponent
@@ -137,6 +138,10 @@ export class PoTableComponent extends PoTableBaseComponent implements AfterViewI
     this.resizeListener = renderer.listen('window', 'resize', (event: any) => {
       this.debounceResize();
     });
+  }
+
+  get tableRowTemplateDirectionIsRight() {
+    return this.tableRowTemplate?.tableRowTemplateArrowDirection === PoTableRowTemplateArrowDirection.Right;
   }
 
   get columnCount() {
