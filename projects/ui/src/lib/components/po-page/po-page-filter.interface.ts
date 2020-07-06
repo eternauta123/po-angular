@@ -17,7 +17,18 @@ export interface PoPageFilter {
    */
   advancedAction?: string | Function;
 
-  /** Nome do `ngModel` do campo de filtro. */
+  /**
+   * @deprecated 3.x.x
+   *
+   * @description
+   *
+   * ***Deprecated 3.x.x***
+   *
+   * Nome do `ngModel` do campo de filtro.
+   *
+   * > Para pegar o valor utilize o parâmetro passado pelas funções referênciadas em ´action´ e ´advancedAction´
+   *
+   */
   ngModel?: string;
 
   /** Texto de instrução exibido dentro do campo de filtro. */
