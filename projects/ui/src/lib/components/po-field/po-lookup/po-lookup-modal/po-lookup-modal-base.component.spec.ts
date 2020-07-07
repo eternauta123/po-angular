@@ -1,3 +1,4 @@
+import { Directive } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 
 import * as UtilsFunctions from '../../../../utils/util';
@@ -8,6 +9,7 @@ import { PoTableColumnSortType } from '../../../po-table/enums/po-table-column-s
 import { poLookupLiteralsDefault, PoLookupModalBaseComponent } from './po-lookup-modal-base.component';
 import { PoLookupResponseApi } from '../interfaces/po-lookup-response-api.interface';
 
+@Directive()
 class PoLookupModalComponent extends PoLookupModalBaseComponent {
   openModal(): void {}
 }

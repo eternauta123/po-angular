@@ -1,4 +1,4 @@
-import { fakeAsync, tick } from '@angular/core/testing';
+import { Directive } from '@angular/core';
 import { FormControl } from '@angular/forms';
 
 import { expectPropertiesValues, expectSettersMethod } from '../../../util-test/util-expect.spec';
@@ -13,6 +13,7 @@ import * as UtilsFunctions from '../../../utils/util';
 import { PoMultiselectBaseComponent, poMultiselectLiteralsDefault } from './po-multiselect-base.component';
 import { PoMultiselectFilterMode } from './po-multiselect-filter-mode.enum';
 
+@Directive()
 class PoMultiselectTestComponent extends PoMultiselectBaseComponent {
   updateVisibleItems() {}
 }

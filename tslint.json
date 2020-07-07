@@ -1,6 +1,9 @@
 {
   "extends": ["@po-ui/ng-tslint", "tslint-plugin-prettier", "tslint-config-prettier"],
   "rules": {
+    "deprecation": {
+      "severity": "warning"
+    },
     "no-identical-functions": false,
     "object-literal-key-quotes": false,
     "only-arrow-functions": false,

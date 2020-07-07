@@ -10,6 +10,9 @@
     "type": "git",
     "url": "https://github.com/po-ui/po-angular"
   },
+  "scripts": {
+    "postinstall": "ngcc"
+  },
   "schematics": "./schematics/collection.json",
   "ng-update": {
     "migrations": "./schematics/migrations.json",
@@ -22,7 +25,8 @@
   },
   "dependencies": {
     "@po-ui/style": "0.0.0-PLACEHOLDER",
-    "@po-ui/ng-schematics": "0.0.0-PLACEHOLDER"
+    "@po-ui/ng-schematics": "0.0.0-PLACEHOLDER",
+    "tslib": "^2.0.0"
   },
   "peerDependencies": {
     "@angular/animations": "~9.1.0",

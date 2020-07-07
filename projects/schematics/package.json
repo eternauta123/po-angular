@@ -11,6 +11,7 @@
     "url": "https://github.com/po-ui/po-angular"
   },
   "scripts": {
+    "postinstall": "ngcc",
     "tsc": "tsc",
     "build": "npm run tsc -- -p ./tsconfig.json",
     "pack": "gulp replaceVersion && cd ../../dist/ng-schematics && npm pack",
