@@ -128,7 +128,6 @@ export abstract class PoDatepickerBaseComponent implements ControlValueAccessor,
   protected onChangeModel: any = null;
   protected validatorChange: any;
   protected onTouchedModel: any = null;
-  protected shortLanguage: string;
 
   private _format?: string = poDatepickerFormatDefault;
   private _isoFormat: PoDatepickerIsoFormat;
@@ -136,6 +135,7 @@ export abstract class PoDatepickerBaseComponent implements ControlValueAccessor,
   private _minDate: Date;
   private _noAutocomplete?: boolean = false;
   private _placeholder?: string = '';
+  private shortLanguage: string;
   private previousValue: any;
   private _date: Date;
 
@@ -348,7 +348,9 @@ export abstract class PoDatepickerBaseComponent implements ControlValueAccessor,
     return this._locale || this.shortLanguage;
   }
 
-  constructor() {}
+  constructor(private languageService: PoLanguageService) {
+    this.shortLanguage = this.languageService.getShortLanguage();
+  }
 
   set date(value: any) {
     this._date = typeof value === 'string' ? convertIsoToDate(value, false, false) : value;
@@ -484,7 +486,15 @@ export abstract class PoDatepickerBaseComponent implements ControlValueAccessor,
     return new PoMask(mask, true);
   }
 
-  protected abstract replaceFormatSeparator(): any;
+  // Retorna o formato de acordo com o locale.
+  protected replaceFormatSeparator() {
+    let newFormat = this.format;
+    const newDateSeparator = this.languageService.getDateSeparator(this.locale);
+    if (newDateSeparator !== '/') {
+      newFormat = newFormat.replace(/\//g, newDateSeparator);
+    }
+    return newFormat;
+  }
 
   abstract writeValue(value: any): void;
 

@@ -108,12 +108,11 @@ export class PoDatepickerComponent extends PoDatepickerBaseComponent implements 
 
   constructor(
     private controlPosition: PoControlPositionService,
-    private languageService: PoLanguageService,
+    languageService: PoLanguageService,
     private renderer: Renderer2,
     el: ElementRef
   ) {
-    super();
-    this.shortLanguage = this.languageService.getShortLanguage();
+    super(languageService);
     this.el = el;
   }
 
@@ -355,16 +354,6 @@ export class PoDatepickerComponent extends PoDatepickerBaseComponent implements 
   /* istanbul ignore next */
   verifyMobile() {
     return isMobile();
-  }
-
-  // Retorna o formato de acordo com o locale.
-  protected replaceFormatSeparator() {
-    let newFormat = this.format;
-    const newDateSeparator = this.languageService.getDateSeparator(this.locale);
-    if (newDateSeparator !== '/') {
-      newFormat = newFormat.replace(/\//g, newDateSeparator);
-    }
-    return newFormat;
   }
 
   private closeCalendar() {
